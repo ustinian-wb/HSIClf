@@ -11,17 +11,17 @@ num_classes_dict = {
 }
 
 # 噪声水平
-noise_ratio = 0.4
+noise_ratio = 0.1
 
 # 扩散学习相关参数
-vote_times = 100  # 投票次数
+vote_times = 5  # 投票次数
 T = 162  # 超像素数量
 pca_dim = 64  # PCA降维维度(%, dim): (0.999, 69) (0.99, 25) (0.95, 5)
-unlabelled_ratio = 0.5  # unlabelled数据所占比例
+unlabelled_ratio = 0.4  # unlabelled数据所占比例
 alpha = 0.7  # 扩散程度
 
 # cnn参数
-epochs = 10
+epochs = 200
 lr = 0.00005
 batch_size = 1024
 
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
         final_predict_label = utils.majority_vote(label_presudo_list)
         accuracy, confusion_mat = utils.evaluate(one_hot_gt.reshape((total_samples, -1)), final_predict_label,
-                                                 iters=i + 1)
+                                                 iters=i + 1, noise_ratio=noise_ratio)
         accuracy_list.append(round(accuracy, 4))
 
         print("\n> 投票结果:")
@@ -111,5 +111,5 @@ if __name__ == "__main__":
     # MVA投票
     final_predict_label = utils.majority_vote(label_presudo_list)
     accuracy, confusion_mat = utils.evaluate(one_hot_gt.reshape((total_samples, -1)), final_predict_label,
-                                             iters=vote_times)
+                                             iters=vote_times, noise_ratio=noise_ratio)
     print(f"Accuracy[vote:{vote_times}]: {accuracy}")

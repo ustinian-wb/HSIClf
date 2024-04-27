@@ -224,12 +224,13 @@ def diffusion_learning(SSPTM, one_hot_gt, alpha=0.5, verbose=False):
     return one_hot_Z, Z, info
 
 
-def plot_confusion_matrix(confusion_mat, iters, accu):
+def plot_confusion_matrix(confusion_mat, iters, accu, noise_ratio):
     """
     绘制混淆矩阵
     :param confusion_mat: 混交矩阵
     :param iters: 迭代次数 - 用于标题
     :param accu: 正确率 - 用于标题
+    :param noise_ratio: 噪声比例 - 用于绘制标题
     :return:
     """
     plt.figure(figsize=(10, 8))
@@ -237,17 +238,18 @@ def plot_confusion_matrix(confusion_mat, iters, accu):
     plt.xlabel('Predicted labels')
     plt.ylabel('True labels')
     plt.title(f'Confusion Matrix [iters: {iters}, accuracy: {accu}]')
-    path = f'./results/conf_mat[iters_{iters}, accuracy_{accu}].png'
+    path = f'./results/conf_mat[noise_ratio_{noise_ratio}, iters_{iters}, accuracy_{accu}].png'
     plt.savefig(path)
     plt.show()
 
 
-def evaluate(ground_truth, predictions, iters):
+def evaluate(ground_truth, predictions, iters, noise_ratio):
     """
     评价结构，计算正确率和混淆矩阵
     :param ground_truth: 标签真值
     :param predictions: 标签预测值
     :param iters: 迭代次数 - 用于绘图标题
+    :param noise_ratio: 噪声比例 - 用于绘制标题
     :return: 正确率, 混淆矩阵
     """
     # 计算预测的正确率
@@ -257,7 +259,7 @@ def evaluate(ground_truth, predictions, iters):
     confusion_mat = confusion_matrix(ground_truth.argmax(axis=1), predictions.argmax(axis=1))
 
     # 可视化混淆矩阵
-    plot_confusion_matrix(confusion_mat, iters, round(accuracy, 4))
+    plot_confusion_matrix(confusion_mat, iters, round(accuracy, 4), noise_ratio)
     return accuracy, confusion_mat
 
 
