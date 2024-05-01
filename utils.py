@@ -7,12 +7,83 @@ import matplotlib.pyplot as plt
 
 import ERSModule
 import cv2
-
+import pywt
+from scipy.ndimage import uniform_filter
 from scipy.sparse.linalg import cg
 from scipy.sparse import identity
 import time
 from sklearn.metrics import accuracy_score, confusion_matrix
 import seaborn as sns
+
+
+def load_dataset(X_path, y_path):
+    """
+    加载数据集
+    :param X_path: 数据路径
+    :param y_path: 标签路径
+    :return: 加载的数据
+    """
+    X = np.load(X_path)
+    y = np.load(y_path)
+    return X, y
+
+
+# TODO: 增加更多参数
+def preprocess(data, label, num_class, pca_dim, T):
+    """
+    预处理函数：包括标准化、滤波、PCA降维、超像素分割、转为one-hot编码
+    :param data: 数据
+    :param label: 标签
+    :param num_class: 标签类别数
+    :param pca_dim: PCA降维维度
+    :param T: 超像素数量
+    :return: 降维后的数据、one-hot编码标签、超像素
+    """
+    # 标准化: 均值为0，标准差为1
+    normalized_data = z_score(data)
+
+    # TODO: 平均滤波的效果一般，可以尝试保留边缘信息的滤波器，例如小波变换
+    # 平均滤波
+    filtered_data = filter(normalized_data, window=3)
+    # filtered_data = normalized_data
+
+    # pca降维
+    reduced_data = pca(filtered_data, pca_dim)
+
+    # 超像素分割
+    superpixels = ers(pca(filtered_data, 3), T, conn8=1, lamb=0.5, sigma=5, show_image=False, save_image=False)
+
+    # 标签转换为one-hot编码
+    one_hot_label = to_one_hot(label, num_class)
+    return reduced_data, one_hot_label, superpixels
+
+
+def filter(img, window=3):
+    """
+    平均滤波
+    :param img: 输入图像
+    :param window: 平均滤波器的窗口大小
+    :return: 滤波后的图像
+    """
+    filtered_img = np.zeros_like(img)
+    for i in range(img.shape[2]):
+        filtered_img[:, :, i] = uniform_filter(img[:, :, i], size=window, mode='reflect')
+    return filtered_img
+
+
+def z_score(data):
+    """
+    （在特征维度）标准化为均值为0，方差为1
+    :param data: 输入数据
+    :return: 标准化后的数据
+    """
+    # 计算均值和标准差
+    mean = np.mean(data, axis=(0, 1))
+    std = np.std(data, axis=(0, 1))
+
+    # 标准化
+    normalized_data = (data - mean) / std
+    return normalized_data
 
 
 def to_one_hot(labels, num_classes):
@@ -25,7 +96,20 @@ def to_one_hot(labels, num_classes):
     return np.eye(num_classes)[labels.astype(int)].astype(int)
 
 
-def ers(img_3d, num_superpixel, conn8=1, lamb=0.5, sigma=5.0, show_image=True, save_image=True):
+def pca(input_data, dimension):
+    """
+    PCA降维
+    :param input_data: 输入ndarray
+    :param dimension:  降维后的维度
+    :return: 降维后的数据
+    """
+    pca_model = PCA(n_components=dimension)
+    reduced_data_array = np.reshape(pca_model.fit_transform(np.reshape(input_data, (-1, input_data.shape[2]))),
+                                    input_data.shape[:-1] + (dimension,))
+    return reduced_data_array
+
+
+def ers(img_3d, num_superpixel, conn8=1, lamb=0.5, sigma=5.0, show_image=True, save_image=False):
     """
     ERS超像素分割
     :param img_3d: 3维HSI图像
@@ -109,64 +193,82 @@ def colormap(input, colors):
     return output
 
 
-def show_image_projection(data, cmap='gray'):
+def add_noise_to_label(label, noise_ratio):
     """
-    展示HSI向二维平面投影图像
-    :param data: HSI图像
-    :param cmap: 配色
-    :return: None
+    向标签中增加噪声
+    :param label: 标签真值
+    :param noise_ratio: 噪声比例
+    :return: 带有噪声的标签值
     """
-    projection = data.mean(axis=2)  # 可以尝试其他投影方法，如最大值投影等
-    plt.imshow(projection, cmap=cmap)
-    plt.axis('off')
-    plt.title('Projection')
-    plt.show()
+    M, N, c = label.shape
+    label = label.reshape(-1, label.shape[-1])
+    num_samples, num_classes = label.shape
+    noisy_label = np.copy(label)
+
+    # 计算要添加噪声的样本数量
+    num_noisy_samples = int(num_samples * noise_ratio)
+
+    # 为这些样本添加噪声
+    noisy_indices = np.random.choice(num_samples, size=num_noisy_samples, replace=False)
+    for idx in noisy_indices:
+        # 随机选择一个要更改为 1 的类别
+        class_idx = np.random.randint(num_classes)
+        # 将该样本的标签更改为对应的 one-hot 编码
+        noisy_label[idx] = np.eye(num_classes)[class_idx]
+
+    noisy_label = noisy_label.reshape(M, N, c)
+    return noisy_label
 
 
-def pca(input_data, dimension):
+def split_dataset(data, one_hot_label, dirty_ratio):
     """
-    PCA降维
-    :param input_data: 输入ndarray
-    :param dimension:  降维后的维度
-    :return: 降维后的数据
+    按照dirty_ratio划分数据集为clean和dirty
+    :param data: 数据集
+    :param one_hot_label: one-hot编码标签
+    :param dirty_ratio: 脏数据比例
+    :return: clean_data, dirty_data, clean_label, dirty_label, dirty_mask矩阵
     """
-    pca_model = PCA(n_components=dimension)
-    reduced_data_array = np.reshape(pca_model.fit_transform(np.reshape(input_data, (-1, input_data.shape[2]))),
-                                    input_data.shape[:-1] + (dimension,))
-    return reduced_data_array
+    total_samples, block_N, block_M, _ = data.shape
+    N, M, c = one_hot_label.shape
+    num_dirty = int(total_samples * dirty_ratio)
+
+    # 将标签展平为一维数组
+    flattened_labels = one_hot_label.reshape((total_samples, -1))
+
+    # 随机选择dirty数据的索引
+    dirty_indices = np.random.choice(total_samples, num_dirty, replace=False)
+
+    # 创建标记矩阵 True: dirty; False: clean
+    dirty_mask = np.zeros((N, M), dtype=bool)
+    dirty_mask.flat[dirty_indices] = True
+
+    # 根据dirty_indices将数据和标签分为有标签数据和无标签数据
+    clean_data = data[~dirty_mask.flatten()]
+    clean_label = flattened_labels[~dirty_mask.flatten()]
+    dirty_data = data[dirty_mask.flatten()]
+    dirty_label = flattened_labels[dirty_mask.flatten()]
+
+    return clean_data, dirty_data, clean_label, dirty_label, dirty_mask
 
 
-def split_data(data, one_hot_gt, unlabelled_ratio):
+def extract_samples(img, window_size=7):
     """
-    将data和one_hot_gt随机划分为干净数据和unlabelled数据，并返回划分后的数据和标记矩阵。
-    :param data: 降维后的数据，形状为(N, M, D)
-    :param one_hot_gt: 标签的one-hot编码，形状为(N, M, C)
-    :param unlabelled_ratio: unlabelled数据所占比例，取值范围为[0, 1]
-    :return: clean_data: 干净数据，形状为(N, M, D)
-             clean_labels: 干净数据的标签，形状为(N, M, C)，one-hot编码
-             unlabelled_mask: 标记矩阵，形状为(N, M)，其中1表示对应位置为unlabelled数据，0表示为干净数据
+    按样本块提取像素
+    :param img: HSI图像
+    :param window_size: 样本块窗口大小
+    :return: 提取好的样本(num_samples, window_size, window_size, feature_dim)
     """
-    N, M, _ = data.shape
-    total_samples = N * M
-    num_unlabelled = int(total_samples * unlabelled_ratio)
-
-    # 将数据和标签展平为一维数组
-    flattened_data = data.reshape((total_samples, -1))
-    flattened_labels = one_hot_gt.reshape((total_samples, -1))
-
-    # 随机选择unlabelled数据的索引
-    unlabelled_indices = np.random.choice(total_samples, num_unlabelled, replace=False)
-
-    # 创建标记矩阵
-    unlabelled_mask = np.zeros((N, M), dtype=bool)
-    unlabelled_mask.flat[unlabelled_indices] = True
-
-    # 根据unlabelled_indices将数据和标签分为有标签数据和无标签数据
-    clean_data = flattened_data[~unlabelled_mask.flatten()]
-    clean_labels = flattened_labels[~unlabelled_mask.flatten()]
-    unlabelled_data = flattened_data[unlabelled_mask.flatten()]
-
-    return clean_data, clean_labels, unlabelled_data, unlabelled_mask
+    # 反射填充
+    padded_img = np.pad(img, ((window_size // 2, window_size // 2), (window_size // 2, window_size // 2), (0, 0)),
+                        mode='reflect')
+    samples = []
+    for i in range(window_size // 2, padded_img.shape[0] - window_size // 2):
+        for j in range(window_size // 2, padded_img.shape[1] - window_size // 2):
+            # 提取以当前像素为中心的窗口
+            sample = padded_img[i - window_size // 2:i + window_size // 2 + 1,
+                     j - window_size // 2:j + window_size // 2 + 1, :]
+            samples.append(sample)
+    return np.array(samples)
 
 
 def diffusion_learning(SSPTM, one_hot_gt, alpha=0.5, verbose=False):
@@ -217,18 +319,17 @@ def diffusion_learning(SSPTM, one_hot_gt, alpha=0.5, verbose=False):
     # 找出每一行中最大元素的索引
     max_indices = np.argmax(Z, axis=1)
     # 创建一个与Z形状相同，但全部填充0的矩阵
-    one_hot_Z = np.zeros_like(Z, dtype=np.uint16)
+    one_hot_Z = np.zeros_like(Z, dtype=np.float32)
     # 在每一行的最大元素索引处设置为1
     one_hot_Z[np.arange(Z.shape[0]), max_indices] = 1
 
     return one_hot_Z, Z, info
 
 
-def plot_confusion_matrix(confusion_mat, iters, accu, noise_ratio):
+def plot_confusion_matrix(confusion_mat, accu, noise_ratio, save=True):
     """
     绘制混淆矩阵
     :param confusion_mat: 混交矩阵
-    :param iters: 迭代次数 - 用于标题
     :param accu: 正确率 - 用于标题
     :param noise_ratio: 噪声比例 - 用于绘制标题
     :return:
@@ -237,18 +338,18 @@ def plot_confusion_matrix(confusion_mat, iters, accu, noise_ratio):
     sns.heatmap(confusion_mat, annot=True, fmt='d', cmap='Blues')
     plt.xlabel('Predicted labels')
     plt.ylabel('True labels')
-    plt.title(f'Confusion Matrix [iters: {iters}, accuracy: {accu}]')
-    path = f'./results/conf_mat[noise_ratio_{noise_ratio}, iters_{iters}, accuracy_{accu}].png'
-    plt.savefig(path)
+    plt.title(f'Confusion Matrix [accuracy: {accu}]')
+    path = f'./results/conf_mat[noise_ratio_{noise_ratio}, accuracy_{accu}].png'
+    if save:
+        plt.savefig(path)
     plt.show()
 
 
-def evaluate(ground_truth, predictions, iters, noise_ratio):
+def evaluate(ground_truth, predictions, noise_ratio, save):
     """
     评价结构，计算正确率和混淆矩阵
     :param ground_truth: 标签真值
     :param predictions: 标签预测值
-    :param iters: 迭代次数 - 用于绘图标题
     :param noise_ratio: 噪声比例 - 用于绘制标题
     :return: 正确率, 混淆矩阵
     """
@@ -259,44 +360,17 @@ def evaluate(ground_truth, predictions, iters, noise_ratio):
     confusion_mat = confusion_matrix(ground_truth.argmax(axis=1), predictions.argmax(axis=1))
 
     # 可视化混淆矩阵
-    plot_confusion_matrix(confusion_mat, iters, round(accuracy, 4), noise_ratio)
+    plot_confusion_matrix(confusion_mat, round(accuracy, 4), noise_ratio, save=save)
     return accuracy, confusion_mat
 
 
-def add_noise_to_ground_truth(ground_truth, noise_ratio):
-    """
-    向标签中增加噪声
-    :param ground_truth: 标签真值
-    :param noise_ratio: 噪声比例
-    :return: 带有噪声的标签值
-    """
-    num_samples, num_classes = ground_truth.shape
-    noisy_ground_truth = np.copy(ground_truth)
+if __name__ == '__main__':
+    # 做测试用
 
-    # 计算要添加噪声的样本数量
-    num_noisy_samples = int(num_samples * noise_ratio)
+    # 生成示例数据
+    data = np.array([[[1, 2], [3, 4], [5, 6]],
+                     [[7, 8], [9, 10], [11, 12]],
+                     [[13, 14], [15, 16], [17, 18]]])
 
-    # 为这些样本添加噪声
-    for _ in range(num_noisy_samples):
-        # 随机选择一个样本和一个要更改为 1 的类别
-        sample_idx = np.random.randint(num_samples)
-        class_idx = np.random.randint(num_classes)
-        # 将该样本的标签更改为对应的 one-hot 编码
-        noisy_ground_truth[sample_idx] = np.eye(num_classes)[class_idx]
-
-    return noisy_ground_truth
-
-
-def majority_vote(label_presudo_list):
-    """
-    MAV投票
-    :param label_presudo_list: 每轮训练的标签预测值的列表
-    :return: 投票后的标签预测值
-    """
-    # 将所有 label_presudo 相加
-    label_presudo_list = np.array(label_presudo_list)
-    sum_label_presudo = np.sum(label_presudo_list, axis=0)
-    # 将每行最大值的位置设置为 1，其他位置设置为 0
-    vote_result = np.zeros_like(sum_label_presudo)
-    vote_result[np.arange(sum_label_presudo.shape[0]), np.argmax(sum_label_presudo, axis=1)] = 1
-    return vote_result
+    normalized_data = z_score(data)
+    print(normalized_data)
