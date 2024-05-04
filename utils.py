@@ -12,19 +12,20 @@ from scipy.ndimage import uniform_filter
 from scipy.sparse.linalg import cg
 from scipy.sparse import identity
 import time
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, cohen_kappa_score
 import seaborn as sns
+import scipy.io
 
 
-def load_dataset(X_path, y_path):
+def load_dataset(X_path, X_name, y_path, y_name):
     """
     加载数据集
     :param X_path: 数据路径
     :param y_path: 标签路径
     :return: 加载的数据
     """
-    X = np.load(X_path)
-    y = np.load(y_path)
+    X = np.array(scipy.io.loadmat(X_path)[X_name])
+    y = np.array(scipy.io.loadmat(y_path)[y_name])
     return X, y
 
 
@@ -251,6 +252,18 @@ def split_dataset(data, one_hot_label, dirty_ratio):
     return clean_data, dirty_data, clean_label, dirty_label, dirty_mask
 
 
+def gen_label_for_propagation(noisy_label, mask):
+    """
+    将noisy_label中unlabelled的样本标签置为0
+    :param noisy_label: 噪声标签
+    :param mask: unlabelled掩码矩阵
+    :return: 处理后的标签
+    """
+    new_label = np.copy(noisy_label)
+    new_label[mask] = 0
+    return new_label
+
+
 def extract_samples(img, window_size=7):
     """
     按样本块提取像素
@@ -314,7 +327,7 @@ def diffusion_learning(SSPTM, one_hot_gt, alpha=0.5, verbose=False):
 
     # 输出结果
     # print("Z_solution shape:", Z.shape)
-    # print("Time taken[CG]:", end_time - start_time, "seconds")
+    print("Time taken[CG]:", end_time - start_time, "seconds")
 
     # 找出每一行中最大元素的索引
     max_indices = np.argmax(Z, axis=1)
@@ -345,23 +358,46 @@ def plot_confusion_matrix(confusion_mat, accu, noise_ratio, save=True):
     plt.show()
 
 
-def evaluate(ground_truth, predictions, noise_ratio, save):
+def evaluate(ground_truth, predictions, noise_ratio, save=False):
     """
-    评价结构，计算正确率和混淆矩阵
+    评价结果，计算正确率、平均精度、Kappa系数和混淆矩阵
     :param ground_truth: 标签真值
     :param predictions: 标签预测值
     :param noise_ratio: 噪声比例 - 用于绘制标题
-    :return: 正确率, 混淆矩阵
+    :return: 正确率, 平均精度, Kappa系数, 混淆矩阵
     """
-    # 计算预测的正确率
+    # 计算预测的正确率 OA
     accuracy = accuracy_score(ground_truth.argmax(axis=1), predictions.argmax(axis=1))
 
     # 计算混淆矩阵
     confusion_mat = confusion_matrix(ground_truth.argmax(axis=1), predictions.argmax(axis=1))
 
+    # 计算平均精度 AA
+    AA = np.mean(np.diag(confusion_mat) / confusion_mat.sum(axis=1))
+
+    # 计算Kappa系数
+    kappa = cohen_kappa_score(ground_truth.argmax(axis=1), predictions.argmax(axis=1))
+
     # 可视化混淆矩阵
     plot_confusion_matrix(confusion_mat, round(accuracy, 4), noise_ratio, save=save)
-    return accuracy, confusion_mat
+    return [accuracy, AA, kappa, confusion_mat]
+
+def print_evaluation(evaluation_list, msg=''):
+    """
+    打印评估结果
+    :param evaluation_list: 指标
+    :return: None
+    """
+    if msg != '':
+        print(msg)
+    accuracy, AA, kappa, confusion_mat = evaluation_list
+    print("------------------------------")
+    print("Accuracy:", accuracy)
+    print("Average Accuracy:", AA)
+    print("Kappa:", kappa)
+    print("------------------------------")
+    # print("Confusion Matrix:\n", confusion_mat)
+
 
 
 if __name__ == '__main__':

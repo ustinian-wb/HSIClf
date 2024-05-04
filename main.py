@@ -5,29 +5,47 @@ import cnn
 import time
 import ssptm
 
-# 数据集类别数
-num_classes_dict = {
-    'Indian_Pines': 16,
-}
-
+# 数据集
 dataset_dict = {
     'Indian_Pines': {
         'shape': [145, 145],
         'dim': 200,
         'num_class': 16 + 1,
-        'data_path': './datasets/IndianPines/IndianPines.npy',
-        'label_path': './datasets/IndianPines/IndianPines_gt.npy'
+        'data_path': './datasets/IndianPines/Indian_pines_corrected.mat',
+        'data_name': 'indian_pines_corrected',
+        'label_path': './datasets/IndianPines/Indian_pines_gt.mat',
+        'label_name': 'indian_pines_gt',
+        'T': 162
+    },
+    'Pavia_University': {
+        'shape': [610, 340],
+        'dim': 103,
+        'num_class': 9 + 1,
+        'data_path': './datasets/PaviaUniversity/PaviaU.mat',
+        'data_name': 'paviaU',
+        'label_path': './datasets/PaviaUniversity/PaviaU_gt.mat',
+        'label_name': 'paviaU_gt',
+        'T': 132
+    },
+    'Salinas_Scene': {
+        'shape': [512, 217],
+        'dim': 204,
+        'num_class': 16 + 1,
+        'data_path': './datasets/SalinasScene/Salinas_corrected.mat',
+        'data_name': 'salinas_corrected',
+        'label_path': './datasets/SalinasScene/Salinas_gt.mat',
+        'label_name': 'salinas_gt',
+        'T': 102
     },
 }
 
 # 噪声水平
-noise_ratio = 0.1
+noise_ratio = 0.5
 
 # 扩散学习相关参数
-T = 162  # 超像素数量
 pca_dim = 64  # PCA降维维度(%, dim): (0.999, 69) (0.99, 25) (0.95, 5)
-dirty_ratio = 0.4  # unlabelled数据所占比例
-alpha = 0.7  # 扩散程度
+dirty_ratio = 0.3  # unlabelled数据所占比例
+alpha = 0.75  # 扩散程度
 
 # cnn训练参数 - 暂时直接写入了代码
 # epochs = 200
@@ -36,12 +54,15 @@ alpha = 0.7  # 扩散程度
 
 if __name__ == "__main__":
     # 加载数据集
+    test_dataset = 'Indian_Pines'
     print("\n> 加载数据集并预处理...")
-    dataset = dataset_dict['Indian_Pines']
-    data, label = utils.load_dataset(dataset['data_path'], dataset['label_path'])
+    dataset = dataset_dict[test_dataset]
+    data, label = utils.load_dataset(dataset['data_path'], dataset['data_name'], dataset['label_path'],
+                                     dataset['label_name'])
 
     # 预处理
-    processed_data, one_hot_label, superpixels = utils.preprocess(data, label, dataset['num_class'], pca_dim, T)
+    processed_data, one_hot_label, superpixels = utils.preprocess(data, label, dataset['num_class'], pca_dim,
+                                                                  dataset['T'])
 
     # 提取出样本块
     extracted_data = utils.extract_samples(processed_data, window_size=9)
@@ -52,14 +73,14 @@ if __name__ == "__main__":
     #               test_size=0.3, epochs=30,
     #               lr=0.001, batch_size=128, save_model=False)
 
-    print("\n> 构造带有噪声的数据集...")
+    print(f"\n> 构造带有噪声的数据集[ratio={noise_ratio}]...")
     # 向标签中增加噪声
     noisy_label = utils.add_noise_to_label(one_hot_label, noise_ratio)
-    # 查看当前标签的正确率
-    accuracy, confusion_mat = utils.evaluate(one_hot_label.reshape((data.shape[0] * data.shape[1], -1)),
-                                             noisy_label.reshape((data.shape[0] * data.shape[1], -1)),
-                                             noise_ratio=noise_ratio, save=False)
-    print(f"The accuracy of labels with noise: {accuracy}")
+    # # 查看当前标签的正确率
+    # evaluation_list = utils.evaluate(one_hot_label.reshape((data.shape[0] * data.shape[1], -1)),
+    #                                          noisy_label.reshape((data.shape[0] * data.shape[1], -1)),
+    #                                          noise_ratio=noise_ratio, save=False)
+    # utils.print_evaluation(evaluation_list, '> The accuracy of labels with noise: ')
 
     # 划分数据集(带有脏标签)
     clean_data, dirty_data, clean_label, dirty_label, mask = utils.split_dataset(extracted_data, noisy_label,
@@ -83,12 +104,13 @@ if __name__ == "__main__":
 
     # 预测伪标签
     print("预测伪标签...")
-    pseudo_label, cg_solution, info = utils.diffusion_learning(SSPTM, noisy_label, alpha=alpha, verbose=False)
+    remove_noise_label = utils.gen_label_for_propagation(noisy_label, mask)
+    pseudo_label, cg_solution, info = utils.diffusion_learning(SSPTM, remove_noise_label, alpha=alpha, verbose=False)
 
-    accuracy, confusion_mat = utils.evaluate(one_hot_label.reshape((data.shape[0] * data.shape[1], -1)),
-                                             pseudo_label,
-                                             noise_ratio=noise_ratio)
-    print(f"直接以伪标签作为结果的正确率为：{accuracy}")
+    evaluation_list = utils.evaluate(one_hot_label.reshape((data.shape[0] * data.shape[1], -1)),
+                                     pseudo_label,
+                                     noise_ratio=noise_ratio, save=False)
+    utils.print_evaluation(evaluation_list, '> 直接以伪标签作为结果:')
 
     print("\n> 模型第二阶段训练...")
     model = cnn.train_2(model, extracted_data, pseudo_label, epochs=10, lr=0.001, batch_size=32, save_model=False)
@@ -96,7 +118,7 @@ if __name__ == "__main__":
     # 可以直接加载训练两次后的模型来进行预测，需要只是掉提取样本块后的代码
     # model = cnn.load_model_eval(model_path, pca_dim, dataset['num_class'])
     result_label = cnn.cls(model, extracted_data, batch_size=32)
-    accuracy, confusion_mat = utils.evaluate(one_hot_label.reshape((data.shape[0] * data.shape[1], -1)),
-                                             result_label,
-                                             noise_ratio=noise_ratio)
-    print(f"二阶段模型在整个数据集上Accuracy: {accuracy}")
+    evaluation_list = utils.evaluate(one_hot_label.reshape((data.shape[0] * data.shape[1], -1)),
+                                     result_label,
+                                     noise_ratio=noise_ratio, save=False)
+    utils.print_evaluation(evaluation_list, '> 二阶段模型在整个数据集上的评价结果:')
