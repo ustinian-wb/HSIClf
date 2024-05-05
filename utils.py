@@ -15,6 +15,7 @@ import time
 from sklearn.metrics import accuracy_score, confusion_matrix, cohen_kappa_score
 import seaborn as sns
 import scipy.io
+from sklearn.model_selection import StratifiedShuffleSplit
 
 
 def load_dataset(X_path, X_name, y_path, y_name):
@@ -201,8 +202,6 @@ def add_noise_to_label(label, noise_ratio):
     :param noise_ratio: 噪声比例
     :return: 带有噪声的标签值
     """
-    M, N, c = label.shape
-    label = label.reshape(-1, label.shape[-1])
     num_samples, num_classes = label.shape
     noisy_label = np.copy(label)
 
@@ -217,7 +216,6 @@ def add_noise_to_label(label, noise_ratio):
         # 将该样本的标签更改为对应的 one-hot 编码
         noisy_label[idx] = np.eye(num_classes)[class_idx]
 
-    noisy_label = noisy_label.reshape(M, N, c)
     return noisy_label
 
 
@@ -230,24 +228,21 @@ def split_dataset(data, one_hot_label, dirty_ratio):
     :return: clean_data, dirty_data, clean_label, dirty_label, dirty_mask矩阵
     """
     total_samples, block_N, block_M, _ = data.shape
-    N, M, c = one_hot_label.shape
+    _, c = one_hot_label.shape
     num_dirty = int(total_samples * dirty_ratio)
-
-    # 将标签展平为一维数组
-    flattened_labels = one_hot_label.reshape((total_samples, -1))
 
     # 随机选择dirty数据的索引
     dirty_indices = np.random.choice(total_samples, num_dirty, replace=False)
 
     # 创建标记矩阵 True: dirty; False: clean
-    dirty_mask = np.zeros((N, M), dtype=bool)
+    dirty_mask = np.zeros(total_samples, dtype=bool)
     dirty_mask.flat[dirty_indices] = True
 
     # 根据dirty_indices将数据和标签分为有标签数据和无标签数据
-    clean_data = data[~dirty_mask.flatten()]
-    clean_label = flattened_labels[~dirty_mask.flatten()]
-    dirty_data = data[dirty_mask.flatten()]
-    dirty_label = flattened_labels[dirty_mask.flatten()]
+    clean_data = data[~dirty_mask]
+    clean_label = one_hot_label[~dirty_mask]
+    dirty_data = data[dirty_mask]
+    dirty_label = one_hot_label[dirty_mask]
 
     return clean_data, dirty_data, clean_label, dirty_label, dirty_mask
 
@@ -264,7 +259,7 @@ def gen_label_for_propagation(noisy_label, mask):
     return new_label
 
 
-def extract_samples(img, window_size=7):
+def extract_samples(img, one_hot_label, superpixels, window_size=9, dataset_size=0.5):
     """
     按样本块提取像素
     :param img: HSI图像
@@ -281,10 +276,24 @@ def extract_samples(img, window_size=7):
             sample = padded_img[i - window_size // 2:i + window_size // 2 + 1,
                      j - window_size // 2:j + window_size // 2 + 1, :]
             samples.append(sample)
-    return np.array(samples)
+    split_samples = np.array(samples)
+    split_label = one_hot_label.reshape(-1, one_hot_label.shape[-1])
+    split_superpixels = superpixels.reshape(-1)
+
+    # 划分数据集
+    if 0 < dataset_size < 1:
+        sss = StratifiedShuffleSplit(n_splits=1, train_size=dataset_size, random_state=666)
+        # sss = StratifiedShuffleSplit(n_splits=1, train_size=dataset_size)
+        train_index, _ = next(sss.split(split_samples, np.argmax(split_label, axis=1)))
+
+        split_samples = split_samples[train_index]
+        split_label = split_label[train_index]
+        split_superpixels = split_superpixels[train_index]
+
+    return split_samples, split_label, split_superpixels
 
 
-def diffusion_learning(SSPTM, one_hot_gt, alpha=0.5, verbose=False):
+def diffusion_learning(SSPTM, Y, alpha=0.5, verbose=False):
     """
     使用共轭梯度法(CG)来求解线性方程组：(I - alpha * W) * Z = Y， 推断伪标签
     :param SSPTM: 概率转移矩阵
@@ -293,7 +302,6 @@ def diffusion_learning(SSPTM, one_hot_gt, alpha=0.5, verbose=False):
     :param verbose: 是否输出迭代信息
     :return: 伪标签label_pseudo
     """
-    Y = one_hot_gt.reshape(-1, one_hot_gt.shape[2])
     num_n, num_c = Y.shape
 
     # print("共轭梯度法求解开始：")
@@ -382,6 +390,7 @@ def evaluate(ground_truth, predictions, noise_ratio, save=False):
     plot_confusion_matrix(confusion_mat, round(accuracy, 4), noise_ratio, save=save)
     return [accuracy, AA, kappa, confusion_mat]
 
+
 def print_evaluation(evaluation_list, msg=''):
     """
     打印评估结果
@@ -397,7 +406,6 @@ def print_evaluation(evaluation_list, msg=''):
     print("Kappa:", kappa)
     print("------------------------------")
     # print("Confusion Matrix:\n", confusion_mat)
-
 
 
 if __name__ == '__main__':

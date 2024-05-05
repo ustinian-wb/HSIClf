@@ -38,7 +38,7 @@ dataset_dict = {
 }
 
 # 噪声水平
-noise_ratio = 0.5
+noise_ratio = 0.1
 
 # 扩散学习相关参数
 pca_dim = 64  # PCA降维维度(%, dim): (0.999, 69) (0.99, 25) (0.95, 5)
@@ -49,7 +49,7 @@ mav_iters = 1
 
 if __name__ == "__main__":
     # 加载数据集
-    test_dataset = 'Pavia_University'
+    test_dataset = 'Salinas_Scene'
     print("\n> 加载数据集并预处理...")
     dataset = dataset_dict[test_dataset]
     data, label = RLPAutils.load_dataset(dataset['data_path'], dataset['data_name'], dataset['label_path'],
@@ -59,21 +59,24 @@ if __name__ == "__main__":
     processed_data, one_hot_label, superpixels = RLPAutils.preprocess(data, label, dataset['num_class'], pca_dim,
                                                                       dataset['T'])
 
+    # 提取出样本块
+    processed_data, one_hot_label, superpixels = RLPAutils.extract_samples(processed_data, one_hot_label, superpixels,
+                                                                       dataset_size=0.2)
+
     print(f"\n> 构造带有噪声的数据集[ratio={noise_ratio}]...")
     # 向标签中增加噪声
     noisy_label = RLPAutils.add_noise_to_label(one_hot_label, noise_ratio)
-    # # 查看当前标签的正确率
-    # evaluation_list = RLPAutils.evaluate(one_hot_label.reshape((data.shape[0] * data.shape[1], -1)),
-    #                                              noisy_label.reshape((data.shape[0] * data.shape[1], -1)),
-    #                                              noise_ratio=noise_ratio, save=False)
-    # RLPAutils.print_evaluation(evaluation_list, '> The accuracy of labels with noise: ')
 
-    pred_label = np.zeros((noisy_label.shape[0] * noisy_label.shape[1], dataset['num_class']))
+    # 查看当前标签的正确率
+    evaluation_list = RLPAutils.evaluate(one_hot_label, noisy_label, noise_ratio=noise_ratio, save=False)
+    RLPAutils.print_evaluation(evaluation_list, '> The accuracy of labels with noise: ')
+
+    pred_label = np.zeros_like(noisy_label, dtype=np.float32)
     for i in range(mav_iters):
         print(f"> 标签传播-第{i + 1}次迭代：")
         # 划分数据集(带有脏标签)
         clean_data, dirty_data, clean_label, dirty_label, mask = RLPAutils.split_dataset(processed_data, noisy_label,
-                                                                                         dirty_ratio)
+                                                                                     dirty_ratio)
         remove_noise_label = RLPAutils.gen_label_for_propagation(noisy_label, mask)
 
         # 标签传播过程
@@ -87,9 +90,7 @@ if __name__ == "__main__":
         pseudo_label, cg_solution, info = RLPAutils.diffusion_learning(SSPTM, remove_noise_label, alpha=alpha,
                                                                        verbose=False)
 
-        evaluation_list = RLPAutils.evaluate(one_hot_label.reshape((data.shape[0] * data.shape[1], -1)),
-                                             pseudo_label,
-                                             noise_ratio=noise_ratio, save=False)
+        evaluation_list = RLPAutils.evaluate(one_hot_label, pseudo_label, noise_ratio=noise_ratio, save=False)
         pred_label += pseudo_label
         RLPAutils.print_evaluation(evaluation_list, '> 本次迭代RLPA的评价结果:')
         print("-------------------------------------------")
@@ -97,7 +98,5 @@ if __name__ == "__main__":
     max_indices = np.argmax(pred_label, axis=1)
     pred_label_onehot = np.zeros_like(pred_label)
     pred_label_onehot[np.arange(pred_label.shape[0]), max_indices] = 1
-    evaluation_list = RLPAutils.evaluate(one_hot_label.reshape((data.shape[0] * data.shape[1], -1)),
-                                         pred_label_onehot,
-                                         noise_ratio=noise_ratio, save=False)
+    evaluation_list = RLPAutils.evaluate(one_hot_label, pred_label_onehot, noise_ratio=noise_ratio, save=False)
     RLPAutils.print_evaluation(evaluation_list, '> RLPA最终MAV的评价结果:')

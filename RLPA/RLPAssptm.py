@@ -40,7 +40,7 @@ def sparse_affinity_matrix(data, superpixel, sim_type='gauss'):
     :param sim_type: 相似度度量 dot:向量点积
     :return: 稀疏亲和矩阵 A
     """
-
+    num_samples, _ = data.shape
     # 将数组数值归一化至0~1
     normalized_data = (data - np.min(data)) / (np.max(data) - np.min(data))
     # print3d(normalized_data, id='normalized_data', superpixel=superpixel)
@@ -49,15 +49,15 @@ def sparse_affinity_matrix(data, superpixel, sim_type='gauss'):
     variances = compute_superpixel_variances(normalized_data, superpixel)
 
     # 初始化稀疏亲和矩阵 A
-    A = np.zeros((data.shape[0] * data.shape[1], data.shape[0] * data.shape[1]))
+    A = np.zeros((num_samples, num_samples))
 
     # 计算相似度矩阵
     for sp in np.unique(superpixel):  # 对每个超像素值进行迭代
         mask = superpixel == sp  # 创建一个布尔掩码，标记出所有值等于当前超像素值的位置
         variance = variances[sp]  # 获取当前超像素区域的方差
 
-        # 从归一化后的数据中获取当前超像素区域的所有像素值，并将其重塑为二维数组，其中每行表示一个像素
-        masked_data = normalized_data[mask].reshape(-1, normalized_data.shape[2])
+        # 从归一化后的数据中获取当前超像素区域的所有像素值，其中每行表示一个像素
+        masked_data = normalized_data[mask]
 
         # 相似度度量方式为高斯核 - RLPA
         if sim_type == 'gauss':
@@ -90,11 +90,7 @@ def sparse_affinity_matrix(data, superpixel, sim_type='gauss'):
         # 使用np.where(mask)获取当前超像素区域内每个像素的索引
         idxs = np.where(mask)
         # 将相似度填充到稀疏亲和矩阵A的对应位置
-        for i, idx in enumerate(idxs[0]):
-            x = idx * data.shape[1] + idxs[1][i]
-            y = mask.flatten()
-            A[x, y] = similarities[i]
-
+        A[idxs[0][:, np.newaxis], idxs[0][np.newaxis, :]] = similarities
     return A
 
 
