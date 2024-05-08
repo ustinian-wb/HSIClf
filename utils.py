@@ -408,6 +408,37 @@ def print_evaluation(evaluation_list, msg=''):
     # print("Confusion Matrix:\n", confusion_mat)
 
 
+def generate_weights_for_loss(pseudo_label, cg_solution):
+    """
+    构建第二阶段训练的损失函数中的样本权重和类别权重
+    :param pseudo_label: 预测伪标签
+    :param cg_solution: 预测伪标签概率值
+    :return: 权重
+    """
+    # 为每个伪标签增加权重
+
+    # 对样本类别预测概率值进行归一化
+    normalized_cg_solution = cg_solution / cg_solution.sum(axis=1)[:, np.newaxis]
+    # 计算熵值
+    eps = 1e-10  # 添加一个小的常数，避免log(0)的情况
+    entropies = -np.sum(normalized_cg_solution * np.log(normalized_cg_solution + eps), axis=1)
+    # 归一化熵值
+    max_entropy = np.log(normalized_cg_solution.shape[-1])
+    normalized_entropies = entropies / max_entropy
+    weights_sample = 1 - normalized_entropies
+
+    # 为每个伪类增加权重
+    class_counts = np.sum(pseudo_label, axis=0)
+    weights_class = 1 / class_counts
+    # 归一化权重
+    weights_class = weights_class / np.sum(weights_class)
+
+    return (weights_sample, weights_class)
+
+
+
+
+
 if __name__ == '__main__':
     # 做测试用
 

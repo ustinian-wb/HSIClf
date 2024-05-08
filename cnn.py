@@ -197,6 +197,53 @@ def train_2(model, data, label, epochs=5, lr=0.001, batch_size=32, save_path='./
     return model
 
 
+def train_2_weighted(model, data, label, weights, epochs=5, lr=0.001, batch_size=32, save_path='./models',
+                     save_model=True):
+    data_tensor = torch.tensor(data, dtype=torch.float32).cuda()
+    label_tensor = torch.tensor(label, dtype=torch.float32).cuda()
+    weights_sample_tensor = torch.tensor(weights[0], dtype=torch.float32).cuda()
+    weights_class_tensor = torch.tensor(weights[1], dtype=torch.float32).cuda()
+
+    # 构造 TensorDataset 和 DataLoader
+    dataset = TensorDataset(data_tensor, label_tensor, torch.arange(len(label)))
+    data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+    # 定义损失函数和优化器
+    criterion = nn.CrossEntropyLoss(reduction='none')  # 保持单个样本的loss
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+
+    # 训练网络
+    train_losses = []
+    for epoch in range(epochs):
+        model.train()
+        epoch_train_losses = []
+        for batch_data, batch_labels, batch_indices in data_loader:
+            optimizer.zero_grad()
+            outputs = model(batch_data)
+            loss = criterion(outputs, batch_labels)
+
+            # 增加权重
+            batch_weights_sample = weights_sample_tensor[batch_indices]
+            batch_weights_class = weights_class_tensor[batch_labels.argmax(dim=1)]
+            weighted_loss = loss * batch_weights_sample * batch_weights_class
+            # weighted_loss = weighted_loss.mean()  # Take mean over batch
+            weighted_loss = weighted_loss.sum()
+
+            weighted_loss.backward()
+            optimizer.step()
+            epoch_train_losses.append(weighted_loss.item())
+
+        train_loss = np.mean(epoch_train_losses)
+        train_losses.append(train_loss)
+
+        if (epoch + 1) % 1 == 0:
+            print(f"Epoch [{epoch + 1}/{epochs}], Train Loss: {train_loss:.4f}")
+        if save_model:
+            torch.save(model.state_dict(), f"{save_path}/cnn_stage2_{epoch + 1}_{train_loss:.4f}.pth")
+
+    return model
+
+
 def _test(data, label, in_channels, num_class, test_size=0.3, epochs=200, lr=0.001, batch_size=128, save_model=False,
           save_path='./models'):
     data_tensor = torch.tensor(data, dtype=torch.float32).cuda()

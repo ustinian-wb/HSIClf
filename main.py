@@ -7,7 +7,6 @@ import ssptm
 
 # 数据集
 dataset_dict = {
-    # epoch_1=10 epoch_2=10 pca_dim=64 lr_1 = 0.00005 lr_2 = 0.001
     # (%, dim): (0.999, 69) (0.99, 25) (0.95, 5)
     'Indian_Pines': {
         'shape': [145, 145],
@@ -19,7 +18,6 @@ dataset_dict = {
         'label_name': 'indian_pines_gt',
         'T': 162
     },
-    # epoch_1= epoch_2= pca_dim=
     # (%, dim): (0.999, 16) (0.99, 4) (0.95, 3)
     'Pavia_University': {
         'shape': [610, 340],
@@ -31,7 +29,6 @@ dataset_dict = {
         'label_name': 'paviaU_gt',
         'T': 132
     },
-    # epoch_1= epoch_2= pca_dim=64
     # (%, dim): (0.999, 6) (0.99, 3) (0.95, 2)
     'Salinas_Scene': {
         'shape': [512, 217],
@@ -46,10 +43,10 @@ dataset_dict = {
 }
 
 # 噪声水平
-noise_ratio = 0.5
+noise_ratio = 0.4
 
 # 扩散学习相关参数
-pca_dim = 64  # PCA降维维度
+pca_dim = 16  # PCA降维维度
 dirty_ratio = 0.3  # unlabelled数据所占比例
 alpha = 0.75  # 扩散程度
 
@@ -62,12 +59,12 @@ lr_test = 0.0001
 epochs_1 = 10
 lr_1 = 0.0001
 
-epochs_2 = 20
+epochs_2 = 15
 lr_2 = 0.0001
 
 if __name__ == "__main__":
     # 加载数据集
-    test_dataset = 'Pavia_University'
+    test_dataset = 'Salinas_Scene'
     print("\n> 加载数据集并预处理...")
     dataset = dataset_dict[test_dataset]
     data, label = utils.load_dataset(dataset['data_path'], dataset['data_name'], dataset['label_path'],
@@ -79,7 +76,7 @@ if __name__ == "__main__":
 
     # 提取出样本块
     extracted_data, one_hot_label, superpixels = utils.extract_samples(processed_data, one_hot_label, superpixels,
-                                                                       window_size=9, dataset_size=0.1)
+                                                                       window_size=9, dataset_size=0.15)
 
     # 测试模型本身在正确数据集上的性能：
     # print("\n> 测试模型本身在正确数据集上的性能...")
@@ -102,7 +99,7 @@ if __name__ == "__main__":
     # 训练模型
     print("\n> 模型初始化训练中...")
     model = cnn.train(clean_data, clean_label, pca_dim, dataset['num_class'], batch_size=batch_size, epochs=epochs_1,
-                      lr=lr_1, save_model=True)
+                      lr=lr_1, save_model=False)
 
     # 提取特征
     print("\n> 提取特征中...")
@@ -116,22 +113,6 @@ if __name__ == "__main__":
     print("构建SSPTM...")
     A = ssptm.sparse_affinity_matrix(feature_data, superpixels)
     SSPTM = ssptm.generate_SSPTM(A)
-    # # 计算最大值
-    # max_val = np.max(A)
-    #
-    # # 计算最小值
-    # min_val = np.min(A)
-    #
-    # # 计算均值
-    # mean_val = np.mean(A)
-    #
-    # # 计算中位数
-    # median_val = np.median(A)
-    #
-    # print("最大值:", max_val)
-    # print("最小值:", min_val)
-    # print("均值:", mean_val)
-    # print("中位数:", median_val)
 
     # 预测伪标签
     print("预测伪标签...")
@@ -142,14 +123,21 @@ if __name__ == "__main__":
     utils.print_evaluation(evaluation_list, '> 直接以伪标签作为结果:')
 
     print("\n> 模型第二阶段训练...")
-    model = cnn.train_2(model, extracted_data, pseudo_label, epochs=epochs_2, lr=lr_2, batch_size=batch_size,
-                        save_model=False)
-
     # 可以直接加载训练两次后的模型来进行预测，需要只是掉提取样本块后的代码
     # model = cnn.load_model_eval(model_path, pca_dim, dataset['num_class'])
-    result_label = cnn.cls(model, extracted_data, batch_size=batch_size)
+
+    print("无权重")
+    model_1 = cnn.train_2(model, extracted_data, pseudo_label, epochs=epochs_2, lr=lr_2, batch_size=batch_size,
+                          save_model=False)
+    result_label = cnn.cls(model_1, extracted_data, batch_size=batch_size)
     evaluation_list = utils.evaluate(one_hot_label, result_label, noise_ratio=noise_ratio, save=False)
     utils.print_evaluation(evaluation_list, '> 二阶段模型在整个数据集上的评价结果:')
 
-# TODO: 1. 划分数据集，完成多数据集测试
-# TODO: 2. 尝试设置阈值
+    print("\n带权重：")
+    weights = utils.generate_weights_for_loss(pseudo_label, cg_solution)
+    model_2 = cnn.train_2_weighted(model, extracted_data, pseudo_label, weights, epochs=epochs_2,
+                                   lr=lr_2, batch_size=batch_size,
+                                   save_model=False)
+    result_label = cnn.cls(model_2, extracted_data, batch_size=batch_size)
+    evaluation_list = utils.evaluate(one_hot_label, result_label, noise_ratio=noise_ratio, save=False)
+    utils.print_evaluation(evaluation_list, '> 二阶段模型在整个数据集上的评价结果:')
