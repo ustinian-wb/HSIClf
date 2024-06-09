@@ -1,0 +1,46 @@
+# --*-- conding:utf-8 --*--
+# @Time  : 2024/6/2
+# @Author: weibo
+# @Email : csbowei@gmail.com
+# @File  : common_utils.py
+# @Description: 公共工具类
+
+# 路径使用 root_path+X_path/y_path 格式
+# 类别数不包含0(背景)
+# 超像素数量为 RLPA 中自适应分割计算得出
+
+IndianPines:
+  # 路径配置
+  root_path: "F:/Projects/Pycharm/HSIClf/datasets/IndianPines"
+  X_path: "Indian_pines_corrected.mat"
+  y_path: "Indian_pines_gt.mat"
+  X_name: "indian_pines_corrected"
+  y_name: "indian_pines_gt"
+  shape: [ 145, 145, 200 ]
+  c: 16 # 类别数
+  T: 162 # 超像素数量
+  pca_dim: 64 # (%, dim): (0.999, 69) (0.99, 25) (0.95, 5)
+
+PaviaUniversity:
+  # 路径配置
+  root_path: "F:/Projects/Pycharm/HSIClf/datasets/PaviaUniversity"
+  X_path: "PaviaU.mat"
+  y_path: "PaviaU_gt.mat"
+  X_name: "paviaU"
+  y_name: "paviaU_gt"
+  shape: [ 610, 340, 103 ]
+  c: 9 # 类别数
+  T: 132 # 超像素数量
+  pca_dim: 32 # (%, dim): (0.999, 16) (0.99, 4) (0.95, 3)
+
+SalinasScene:
+  # 路径配置
+  root_path: "F:/Projects/Pycharm/HSIClf/datasets/SalinasScene"
+  X_path: "Salinas_corrected.mat"
+  y_path: "Salinas_gt.mat"
+  X_name: "salinas_corrected"
+  y_name: "salinas_gt"
+  shape: [ 512, 217, 204 ]
+  c: 16 # 类别数
+  T: 102 # 超像素数量
+  pca_dim: 32 # (%, dim): (0.999, 6) (0.99, 3) (0.95, 2)
