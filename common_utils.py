@@ -2,32 +2,44 @@
 # @Time  : 2024/6/2
 # @Author: weibo
 # @Email : csbowei@gmail.com
-# @File  : dataset_config.yaml
-# @Description: 数据集配置文件
+# @Description: 公共工具类
 
-import logging
-import yaml
-import os
-from pathlib import Path
-import numpy as np
-from sklearn.decomposition import PCA
-import logging
 import matplotlib.pyplot as plt
-
-import ERSModule
-import cv2
-import pywt
-from scipy.ndimage import uniform_filter
-from scipy.sparse.linalg import cg
-from scipy.sparse import identity
-import time
-from sklearn.metrics import accuracy_score, confusion_matrix, cohen_kappa_score
 import seaborn as sns
-import scipy.io
-from sklearn.model_selection import StratifiedShuffleSplit
+import numpy as np
+from sklearn.metrics import confusion_matrix, accuracy_score, cohen_kappa_score
 
-# logging配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+import logging
+
+logger = None
+
+
+def setup_logger(name, log_file, level=logging.INFO):
+    """
+    设置一个新的日志记录器
+    :param name: 日志记录器名称
+    :param log_file: 日志保存路径
+    :param level: 日志级别
+    :return: 日志记录器
+    """
+    global logger
+    if logger is None:
+        # 创建一个文件处理器，以追加模式打开日志文件
+        file_handler = logging.FileHandler(log_file, mode='a')
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+        # 创建一个控制台处理器
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+
+        # 获取并配置日志记录器
+        logger = logging.getLogger(name)
+        logger.setLevel(level)
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+    return logger
+
 
 def print_evaluation(y_gt, y_pred, msg=None):
     """
@@ -35,11 +47,8 @@ def print_evaluation(y_gt, y_pred, msg=None):
     :param y_gt: 标签真值
     :param y_pred: 标签预测值
     :param msg: 提示信息
-    :return: None
+    :return: [oa, aa, kappa, conf_matrix]
     """
-
-    import numpy as np
-    from sklearn.metrics import confusion_matrix, accuracy_score, cohen_kappa_score
 
     def evaluate(y_gt, y_pred):
         """
@@ -79,7 +88,6 @@ def print_evaluation(y_gt, y_pred, msg=None):
         :param confusion_mat: 混淆矩阵
         :param x_label: X轴标签
         :param y_label: Y轴标签
-        :return: 无
         """
         plt.figure(figsize=(10, 8))
         sns.heatmap(confusion_mat, annot=True, fmt='d', cmap='Blues')
@@ -90,41 +98,37 @@ def print_evaluation(y_gt, y_pred, msg=None):
 
     # 评价
     oa, aa, kappa, conf_matrix = evaluate(y_gt, y_pred)
-    if msg:
-        print(msg)
-    print("------------------------------")
-    print("Accuracy: {:.2f}%".format(oa * 100))
-    print("Average Accuracy: {:.2f}%".format(aa * 100))
-    print("Kappa: {:.4f}".format(kappa))
-    print("------------------------------")
+    logger.info(f"{msg}"
+                + f"\nOverall Accuracy: {oa * 100:.2f}%"
+                + f"\nAverage Accuracy: {aa * 100:.2f}%"
+                + f"\nKappa: {kappa:.4f}\n")
 
     # 绘制混淆矩阵
     plot_confusion_matrix(conf_matrix)
-
     return [oa, aa, kappa, conf_matrix]
 
 
-def plot_metrics(train_losses, test_losses, test_accuracies):
+def plot_metrics(train_losses, val_losses, val_accuracies):
     """
     绘制loss曲线
     :param train_losses: 训练loss
-    :param test_losses: 测试loss
-    :param test_accuracies: 正确率列表
+    :param val_losses: 验证loss
+    :param val_accuracies: 正确率列表
     :return:
     """
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 5))
     ax1.plot(train_losses, label='Training Loss', color='blue')
-    ax1.plot(test_losses, label='Testing Loss', color='orange')
+    ax1.plot(val_losses, label='Validating Loss', color='orange')
     ax1.set_xlabel('Epoch')
     ax1.set_ylabel('Loss')
-    ax1.set_title('Training and Testing Loss over Epochs')
+    ax1.set_title('Training and Validating Loss over Epochs')
     ax1.legend()
     ax1.grid(True)
 
-    ax2.plot(test_accuracies, label='Testing Accuracy', color='green')
+    ax2.plot(val_accuracies, label='Validating Accuracy', color='green')
     ax2.set_xlabel('Epoch')
     ax2.set_ylabel('Accuracy')
-    ax2.set_title('Testing Accuracy over Epochs')
+    ax2.set_title('Validating Accuracy over Epochs')
     ax2.legend()
     ax2.grid(True)
 

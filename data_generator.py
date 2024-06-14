@@ -1,37 +1,20 @@
 # --*-- conding:utf-8 --*--
-# @Time  : 2024/6/
+# @Time  : 2024/6/2
 # @Author: weibo
 # @Email : csbowei@gmail.com
-# @File  : data_generator.py
-# @Description:
+# @Description: 存储数据的类及其操作
 
-import logging
 import yaml
-import os
 from pathlib import Path
 import numpy as np
 from sklearn.decomposition import PCA
-
-import logging
-import matplotlib.pyplot as plt
-
 import copy
 import ERSModule
 import cv2
-import pywt
 from scipy.ndimage import uniform_filter
-from scipy.sparse.linalg import cg
-from scipy.sparse import identity
-import time
-from sklearn.metrics import accuracy_score, confusion_matrix, cohen_kappa_score
-import seaborn as sns
 import scipy.io
-from sklearn.model_selection import StratifiedShuffleSplit
 
-import common_utils
-
-# logging配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+global logger
 
 
 class DataGenerator():
@@ -51,9 +34,10 @@ class DataGenerator():
         self.T = None
         self.num_classes = None
 
-        # 划分训练集和测试集
+        # 划分训练集、测试集、验证集
         self.train_dataset = []
         self.test_dataset = []
+        self.val_dataset = []
         self.mask = None
 
         # 添加了噪声后的训练集
@@ -62,14 +46,9 @@ class DataGenerator():
         # 标签传播后的训练集
         self.train_dataset_propagated = []
 
-
     def load_dataset(self):
         """
         按照指定配置文件加载数据集
-        :param dataset_name: 要加载的数据集名称
-        :param config_path:  数据集配置文件路径
-        :param dataset_type: 数据类型: mat/npy
-        :return: X, y (ndarray)
         """
         try:
             with open(self.config_path, 'r', encoding='utf-8') as file:
@@ -85,8 +64,6 @@ class DataGenerator():
                 # 读取mat文件
                 if X_path.suffix != ".mat" or y_path.suffix != ".mat":
                     raise ValueError("mat")
-                # path.stem.lower()来获取文件名并转为小写，用作键值
-                # test = np.array(scipy.io.loadmat(y_path))
                 X = np.array(scipy.io.loadmat(X_path)[config['X_name']])
                 y = np.array(scipy.io.loadmat(y_path)[config['y_name']])
             elif self.dataset_type == "npy":
@@ -95,26 +72,20 @@ class DataGenerator():
                 pass
 
         except TypeError as e:
-            logging.error(f"Unsupported data file type：{e}")
+            logger.error(f"Unsupported data file type：{e}")
         except ValueError as e:
-            logging.error(f"Unmatched file type：{e}")
+            logger.error(f"Unmatched file type：{e}")
         except Exception as e:
-            logging.error(f"Error while loading dataset：{e}")
+            logger.error(f"Error while loading dataset：{e}")
 
         self.dataset = [X, y]
-        # return X, y
 
     def preprocess(self, patch=False, show_ers_image=False, ers_params=None):
         """
-        数据预处理，包括: 标准化、滤波、PCA降维、超像素分割，去除标签为0的数据。可选: 提取样本块
-        :param X: 数据
-        :param y: 标签
-        :param pca_dim: PCA降维维度
-        :param T: 超像素数量
+        数据预处理，包括: 标准化、滤波、PCA降维、超像素分割，去除标签为0的数据
         :param patch: 是否提取样本块
         :param show_ers_image: 是否展示超像素分割结果
         :param ers_params: 保留, 为超像素分割设置参数
-        :return: 预处理后的数据, 超像素, 超像素分割结果图片
         """
 
         def z_score(data):
@@ -270,17 +241,14 @@ class DataGenerator():
         filtered_y = flat_y[mask]
         filtered_superpixels = flat_superpixels[mask]
 
-        # return reduced_X, superpixels, ers_results
         self.dataset = [filtered_X, filtered_y]
         self.superpixels = filtered_superpixels
         self.ers_results = ers_results
-        # return filtered_X, filtered_y, filtered_superpixels, ers_results
 
     def split_dataset(self, train_num):
         """
-        划分训练集与测试集。
+        划分训练集、测试集和验证集。
         :param train_num: 当取值(0, 1]时，表示每个类别选取train_num比例的数据；当>1时，表示每个类别取train_num个样本。
-        :return: X_train, y_train, X_test, y_test, mask
         """
         X, y = self.dataset
         unique_classes = np.unique(y)
@@ -307,10 +275,31 @@ class DataGenerator():
         train_indices = np.array(train_indices)
         test_indices = np.array(test_indices)
 
+        # 划分训练集和初步的测试集
         X_train = X[train_indices]
         y_train = y[train_indices]
-        X_test = X[test_indices]
-        y_test = y[test_indices]
+
+        # 进一步划分测试集为测试集和验证集：将剩余的数据80%为测试集，20%为验证集
+        val_indices = []
+        new_test_indices = []
+
+        for cls in unique_classes:
+            cls_test_indices = test_indices[y[test_indices] == cls]
+            num_cls_test_samples = len(cls_test_indices)
+
+            num_val_samples = int(0.2 * num_cls_test_samples)
+            np.random.shuffle(cls_test_indices)
+            val_indices.extend(cls_test_indices[:num_val_samples])
+            new_test_indices.extend(cls_test_indices[num_val_samples:])
+
+        val_indices = np.array(val_indices)
+        new_test_indices = np.array(new_test_indices)
+
+        X_test = X[new_test_indices]
+        y_test = y[new_test_indices]
+        X_val = X[val_indices]
+        y_val = y[val_indices]
+
         self.superpixels = self.superpixels[train_indices]
 
         mask = np.zeros(y.shape, dtype=bool)
@@ -318,16 +307,13 @@ class DataGenerator():
 
         self.train_dataset = [X_train, y_train]
         self.test_dataset = [X_test, y_test]
+        self.val_dataset = [X_val, y_val]
         self.mask = mask
-
-        # return X_train, y_train, X_test, y_test, mask
 
     def add_noise(self, noise_ratio):
         """
         向标签中增加噪声
-        :param y: 标签真值
         :param noise_ratio: 噪声比例
-        :return: 带有噪声的标签值
         """
         self.train_dataset_noisy = copy.copy(self.train_dataset)
         y = self.train_dataset[1]
@@ -350,11 +336,14 @@ class DataGenerator():
                 new_class = np.random.randint(y_min, y_max + 1)
             noisy_y[idx] = new_class
 
-        common_utils.print_evaluation(y, noisy_y, msg="> The accuracy of labels with noise: ")
+        # common_utils.print_evaluation(y, noisy_y, msg="> The accuracy of labels with noise: ")
         self.train_dataset_noisy[1] = noisy_y
 
     def one_hot_encode(self):
-        for idataset in [self.train_dataset_noisy, self.test_dataset]:
+        """
+        将部分数据的标签转为one-hot编码
+        """
+        for idataset in [self.train_dataset_noisy, self.test_dataset, self.val_dataset]:
             labels = idataset[1]
             if labels.ndim > 1:
                 continue

@@ -1,0 +1,10 @@
+2024-06-12 20:30:22,583 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-12 20:30:25,622 - INFO - ------------------------------------> Test noisy_ratio: 0.2
+2024-06-12 20:30:29,064 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.4303 seconds
+Noisy samples: 160 -> 25
+

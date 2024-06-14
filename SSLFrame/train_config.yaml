@@ -1,0 +1,28 @@
+# --*-- conding:utf-8 --*--
+# @Time  : 2024/6/14
+# @Author: weibo
+# @Email : csbowei@gmail.com
+# @Description: 训练参数配置文件
+
+# noisy_ratios = np.array([0, 0.1, 0.3])
+# noisy_ratios = np.array([0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.3, 0.3, 0.3, 0.4, 0.4, 0.4, 0.5, 0.5, 0.5, ])
+# noisy_ratios = np.array([0.5, 0.5, 0.5])
+# noisy_ratios: [0.2]
+
+alpha:
+  IndianPines: 0.75
+  PaviaUniversity: 0.75
+  SalinasScene: 0.7
+
+train_num_dict:
+  IndianPines: 0.1
+  PaviaUniversity: 50
+  SalinasScene: 50
+
+epochs_dict:
+  IndianPines: [10, 20]
+  PaviaUniversity: [10, 20]
+  SalinasScene: [10, 20]
+
+lr: [0.0005, 0.0005]
+batch_size: [128, 128]

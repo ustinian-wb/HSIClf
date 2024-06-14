@@ -8,34 +8,40 @@
 import yaml
 import common_utils
 import numpy as np
-import data_generator
 import label_propagation
 import elm
 
 dataset_config_path = "../dataset_config.yaml"
 # datasets = ['IndianPines', 'PaviaUniversity', 'SalinasScene']
-datasets = ['PaviaUniversity']
+datasets = ['SalinasScene']
 
 # noisy_ratios = np.linspace(0.1, 0.9, 9)
 # noisy_ratios = np.linspace(0.3, 0.4, 1)
 # noisy_ratios = np.array([0, 0.1, 0.3])
 # noisy_ratios = np.array([0.1, 0.1, 0.1, 0.2, 0.2, 0.3, 0.3, 0.3, 0.3, 0.4, 0.4, 0.4, 0.5, 0.5, 0.5, ])
-# noisy_ratios = np.array([0.5, 0.5, 0.5, 0.5, 0.5])
-noisy_ratios = np.array([0.1, 0.1, 0.1, 0.2, 0.2, 0.3, 0.3, 0.3, 0.3, 0.4, 0.4, 0.4, 0.5, 0.5, 0.5, ])
+noisy_ratios = np.array([0.2])
+# noisy_ratios = np.array([0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.3, 0.3, 0.3, 0.4, 0.4, 0.4, 0.5, 0.5, 0.5, ])
 # elm正则化参数
 lambdaa = 2 ** np.array([8, 10, 12, 14])
+
+# 设置日志记录器
+common_utils.setup_logger('RLPA(elm)', 'RLPA(elm).log')
 if __name__ == "__main__":
     for dataset in datasets:
-        # print(f"dataset: {dataset}, noisy_ratio: {noisy_ratio}")
-
         # 获取数据集相关配置
         with open(dataset_config_path, 'r', encoding='utf-8') as file:
             config = yaml.safe_load(file)[dataset]
 
         # 加载数据集
         data = data_generator.DataGenerator(dataset, dataset_config_path)
-
         data.load_dataset()
+
+        common_utils.logger.info("> Parameter settings"
+                                 + f"\ndataset: {dataset}"
+                                 + f"\nseed: {data.seed}"
+                                 + f"\npca_dim: {data.pca_dim}"
+                                 + f"\nsuperpixels: {data.T}")
+
         # 预处理
         data.preprocess(patch=False)
 
@@ -43,6 +49,7 @@ if __name__ == "__main__":
         data.split_dataset(train_num=50)
 
         for noisy_ratio in noisy_ratios:
+            common_utils.logger.info(f"------------------------------------> Test noisy_ratio: {noisy_ratio}")
             # 增加噪声
             data.add_noise(noisy_ratio)
             data.one_hot_encode()
@@ -62,4 +69,5 @@ if __name__ == "__main__":
 
             # 打印预测结果
             # print(Y_pred)
-            common_utils.print_evaluation(Y_pred, data.test_dataset[1], msg="> [ssl model]The accuracy of labels: ")
+            common_utils.print_evaluation(Y_pred, data.test_dataset[1],
+                                          msg=f"> [noisy_ratio: {noisy_ratio}]The accuracy of labels: ")

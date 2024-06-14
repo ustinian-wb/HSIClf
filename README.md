@@ -7,4 +7,25 @@
 
 
 # 文件目录结构
-\|
+
+- main.py
+- loss.py
+- model
+  - resnet
+  - hetconv
+  - xxx
+- label_propagation.py
+- ckpt
+  - resnet
+    - IndianPines
+    - PaviaUniversity
+    - SalinasScene
+  - hetconv
+    - IndianPines
+    - PaviaUniversity
+    - SalinasScene
+  - xxx
+- log
+  - resnet
+  - hetconv
+  - xxx

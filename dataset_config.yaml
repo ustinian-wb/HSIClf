@@ -2,8 +2,7 @@
 # @Time  : 2024/6/2
 # @Author: weibo
 # @Email : csbowei@gmail.com
-# @File  : common_utils.py
-# @Description: 公共工具类
+# @Description: 数据集参数配置文件
 
 # 路径使用 root_path+X_path/y_path 格式
 # 类别数不包含0(背景)

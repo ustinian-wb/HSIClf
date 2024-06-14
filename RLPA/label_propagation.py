@@ -12,6 +12,9 @@ from scipy.sparse.linalg import cg
 from scipy.sparse import identity
 import time
 
+import common_utils
+
+
 def propagation(data, feature_data, unlabelled_ratio=0.3, iters=100):
     """
     输入：data(用于看传播前后的噪声样本数，获取超像素)，训练样本提取出来的特征、一些配置参数
@@ -24,7 +27,7 @@ def propagation(data, feature_data, unlabelled_ratio=0.3, iters=100):
     temp_one_hot = np.zeros((len(temp_labels), num_classes), dtype=int)  # 创建one-hot矩阵
     temp_one_hot[np.arange(len(temp_labels)), temp_labels - 1] = 1  # 减1并设置对应位置为1
 
-    print(f"标签传播前噪声标签样本数量: {np.sum(np.any(temp_one_hot != data.train_dataset_noisy[1], axis=1))}")
+    before_noisy_num = np.sum(np.any(temp_one_hot != data.train_dataset_noisy[1], axis=1))
 
     # 构造SSPTM
     A = sparse_affinity_matrix(feature_data, data.superpixels)
@@ -45,14 +48,19 @@ def propagation(data, feature_data, unlabelled_ratio=0.3, iters=100):
         y_with_unlabelled = y_noisy.copy()
         y_with_unlabelled[unlabelled_indices] = 0
 
-        pseudo_label, cg_solution, info = diffusion_learning(SSPTM, y_noisy, alpha=0.75, verbose=False)
+        pseudo_label, cg_solution, info = diffusion_learning(SSPTM, y_noisy, alpha=0.7, verbose=False)
         y_pred += pseudo_label
     end_time = time.time()
-    print(f"Time taken[CG, iters={iters}]: {end_time-start_time:.4f} seconds")
 
     y_final = np.zeros_like(y_pred)
     y_final[np.arange(y_pred.shape[0]), np.argmax(y_pred, axis=1)] = 1
-    print(f"标签传播后噪声标签样本数量: {np.sum(np.any(temp_one_hot != y_final, axis=1))}")
+
+    after_noisy_num = np.sum(np.any(temp_one_hot != y_final, axis=1))
+
+    common_utils.logger.info(f"> Label propagation"
+                             + f"\nTime taken[CG, iters={iters}]: {end_time - start_time:.4f} seconds"
+                             + f"\nNoisy samples: {before_noisy_num} -> {after_noisy_num}\n")
+
     data.train_dataset_propagated = copy.copy(data.train_dataset)
     data.train_dataset_propagated[1] = y_final
 
@@ -179,7 +187,6 @@ def diffusion_learning(SSPTM, Y, alpha=0.5, verbose=False):
 
     # print("共轭梯度法求解开始：")
 
-
     # 构建方程 (I - alpha * T)Z = Y
     I = identity(num_n)
     A = I - alpha * SSPTM
@@ -205,7 +212,6 @@ def diffusion_learning(SSPTM, Y, alpha=0.5, verbose=False):
             return
     # 输出结果
     # print("Z_solution shape:", Z.shape)
-
 
     # 找出每一行中最大元素的索引
     max_indices = np.argmax(Z, axis=1)
