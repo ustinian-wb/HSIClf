@@ -22,7 +22,7 @@ def train_and_test(model_name, model, train_dataset, val_dataset, epoch=30, lr=0
 
     # 将数据转换为 PyTorch 张量，并调整形状
     # 针对不同模型做数据调整
-    if model_name == 'hetconv':
+    if model_name == 'hetconv' or model_name == 'new':
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32).permute(0, 3, 1, 2).unsqueeze(1).cuda()
         X_val_tensor = torch.tensor(X_val, dtype=torch.float32).permute(0, 3, 1, 2).unsqueeze(1).cuda()
     y_train_tensor = torch.tensor(y_train, dtype=torch.float32).cuda()
@@ -121,7 +121,7 @@ def cls(model_name, model, data, batch_size=128):
         for i in range(0, len(data), batch_size):
             data_batch = data[i:i + batch_size]
 
-            if model_name == 'hetconv':
+            if model_name == 'hetconv' or model_name == 'new':
                 data_tensor = torch.tensor(data_batch, dtype=torch.float32).permute(0, 3, 1, 2).unsqueeze(1).cuda()
 
             batch_outputs = model(data_tensor)

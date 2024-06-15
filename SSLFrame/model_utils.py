@@ -63,7 +63,7 @@ def train_1(model_name, model, train_dataset, superpixels, epoch=20, lr=0.0005, 
     # 针对不同模型做数据调整
     if model_name == 'resnet':
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32).cuda()
-    elif model_name == 'hetconv':
+    elif model_name == 'hetconv' or model_name == 'new':
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32).permute(0, 3, 1, 2).unsqueeze(1).cuda()
     y_train_tensor = torch.tensor(y_train, dtype=torch.float32).cuda()
     train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
@@ -127,7 +127,7 @@ def train_2(model_name, model, train_dataset, val_dataset, epoch=30, lr=0.0005, 
     if model_name == 'resnet':
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32).cuda()
         X_val_tensor = torch.tensor(X_val, dtype=torch.float32).cuda()
-    elif model_name == 'hetconv':
+    elif model_name == 'hetconv' or model_name == 'new':
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32).permute(0, 3, 1, 2).unsqueeze(1).cuda()
         X_val_tensor = torch.tensor(X_val, dtype=torch.float32).permute(0, 3, 1, 2).unsqueeze(1).cuda()
     y_train_tensor = torch.tensor(y_train, dtype=torch.float32).cuda()
@@ -270,7 +270,7 @@ def extract_feature(model_name, model, data, batch_size=51):
             # 针对不同模型做数据调整
             if model_name == 'resnet':
                 data_tensor = torch.tensor(data_batch, dtype=torch.float32).cuda()
-            elif model_name == 'hetconv':
+            elif model_name == 'hetconv' or model_name == 'new':
                 data_tensor = torch.tensor(data_batch, dtype=torch.float32).permute(0, 3, 1, 2).unsqueeze(1).cuda()
             batch_outputs = model(data_tensor, mode='feature')
             outputs.append(batch_outputs.detach().cpu().numpy())
@@ -296,7 +296,7 @@ def cls(model_name, model, data, batch_size=128):
 
             if model_name == 'resnet':
                 data_tensor = torch.tensor(data_batch, dtype=torch.float32).cuda()
-            elif model_name == 'hetconv':
+            elif model_name == 'hetconv' or model_name == 'new':
                 data_tensor = torch.tensor(data_batch, dtype=torch.float32).permute(0, 3, 1, 2).unsqueeze(1).cuda()
 
             batch_outputs = model(data_tensor)

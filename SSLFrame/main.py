@@ -10,6 +10,7 @@ import numpy as np
 import data_generator
 from model import resnet
 from model import hetcnn
+from model import new
 import label_propagation
 import model_utils
 from datetime import datetime
@@ -19,8 +20,10 @@ dataset_config_path = "../dataset_config.yaml"
 # datasets = ['SalinasScene'] # 扩散0.7
 datasets = ['SalinasScene']
 
-noisy_ratios = np.array([0.5])
-selected_model = 'hetconv'
+# noisy_ratios = np.array([0.5])
+noisy_ratios = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+# selected_model = 'hetconv'
+selected_model = 'new'
 
 # 设置日志记录器
 log_file = f'./log/SSL({selected_model})_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.log'
@@ -58,7 +61,7 @@ if __name__ == "__main__":
             model = None
             if selected_model == 'resnet':
                 model = resnet.CustomResNet(data.pca_dim, data.num_classes).cuda()
-            elif selected_model == 'hetconv':
+            elif selected_model == 'hetconv' or selected_model == 'new':
                 # 需要根据不同的数据集来设置fc1的参数
                 fc1_in = 1536 if dataset == 'IndianPines' else 768
                 model = hetcnn.HSI3DNet(data.num_classes, fc1_in).cuda()

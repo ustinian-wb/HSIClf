@@ -8,3 +8,258 @@ superpixels: 102
 Time taken[CG, iters=100]: 3.4303 seconds
 Noisy samples: 160 -> 25
 
+2024-06-15 20:56:51,831 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 20:56:55,527 - INFO - ------------------------------------> Test noisy_ratio: 0.2
+2024-06-15 20:56:59,455 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.9148 seconds
+Noisy samples: 160 -> 30
+
+2024-06-15 20:57:05,988 - INFO - > [noisy_ratio: 0.2]The accuracy of labels: 
+Overall Accuracy: 90.46%
+Average Accuracy: 92.93%
+Kappa: 0.8940
+
+2024-06-15 21:00:19,629 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 21:00:22,794 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:00:26,472 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.6661 seconds
+Noisy samples: 240 -> 60
+
+2024-06-15 21:00:31,868 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 91.56%
+Average Accuracy: 93.60%
+Kappa: 0.9061
+
+2024-06-15 21:12:01,069 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 128
+superpixels: 102
+2024-06-15 21:12:05,870 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:12:09,337 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.4360 seconds
+Noisy samples: 240 -> 91
+
+2024-06-15 21:12:09,976 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 83.46%
+Average Accuracy: 91.05%
+Kappa: 0.8178
+
+2024-06-15 21:12:17,412 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 128
+superpixels: 102
+2024-06-15 21:12:21,986 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:12:25,462 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.4462 seconds
+Noisy samples: 240 -> 81
+
+2024-06-15 21:12:27,201 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 88.74%
+Average Accuracy: 90.89%
+Kappa: 0.8751
+
+2024-06-15 21:12:32,911 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 16
+superpixels: 102
+2024-06-15 21:12:35,919 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:12:39,438 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.5081 seconds
+Noisy samples: 240 -> 71
+
+2024-06-15 21:12:41,084 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 87.69%
+Average Accuracy: 93.08%
+Kappa: 0.8637
+
+2024-06-15 21:12:49,850 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 64
+superpixels: 102
+2024-06-15 21:12:53,305 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:12:57,122 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.7990 seconds
+Noisy samples: 240 -> 45
+
+2024-06-15 21:12:58,174 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 90.54%
+Average Accuracy: 93.36%
+Kappa: 0.8946
+
+2024-06-15 21:13:04,523 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 64
+superpixels: 102
+2024-06-15 21:13:08,163 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:13:12,009 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.8277 seconds
+Noisy samples: 240 -> 53
+
+2024-06-15 21:13:14,170 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 91.90%
+Average Accuracy: 94.80%
+Kappa: 0.9097
+
+2024-06-15 21:13:21,390 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 64
+superpixels: 102
+2024-06-15 21:13:24,889 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:13:28,119 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.2127 seconds
+Noisy samples: 240 -> 82
+
+2024-06-15 21:13:30,319 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 89.37%
+Average Accuracy: 92.99%
+Kappa: 0.8816
+
+2024-06-15 21:13:38,655 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 21:13:41,654 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:13:45,408 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.7414 seconds
+Noisy samples: 240 -> 54
+
+2024-06-15 21:13:49,515 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 91.45%
+Average Accuracy: 93.89%
+Kappa: 0.9048
+
+2024-06-15 21:19:24,831 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 21:19:28,032 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:19:31,450 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.4053 seconds
+Noisy samples: 240 -> 58
+
+2024-06-15 21:19:36,080 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 90.51%
+Average Accuracy: 94.64%
+Kappa: 0.8945
+
+2024-06-15 21:19:42,016 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 21:19:45,140 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:19:48,743 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.5903 seconds
+Noisy samples: 240 -> 62
+
+2024-06-15 21:19:50,731 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 89.19%
+Average Accuracy: 91.31%
+Kappa: 0.8802
+
+2024-06-15 21:20:16,934 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 21:20:20,040 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:20:23,773 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.7210 seconds
+Noisy samples: 240 -> 56
+
+2024-06-15 21:20:25,428 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 90.06%
+Average Accuracy: 92.12%
+Kappa: 0.8896
+
+2024-06-15 21:21:14,034 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 21:21:17,103 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:21:20,665 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.5480 seconds
+Noisy samples: 240 -> 68
+
+2024-06-15 21:21:25,034 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 90.18%
+Average Accuracy: 91.97%
+Kappa: 0.8904
+
+2024-06-15 21:21:52,204 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 21:21:55,242 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:21:58,834 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.5787 seconds
+Noisy samples: 240 -> 72
+
+2024-06-15 21:22:01,449 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 88.92%
+Average Accuracy: 93.00%
+Kappa: 0.8771
+
+2024-06-15 21:22:12,278 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 21:22:15,327 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:22:18,942 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.6029 seconds
+Noisy samples: 240 -> 49
+
+2024-06-15 21:22:19,888 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 90.44%
+Average Accuracy: 92.03%
+Kappa: 0.8938
+
+2024-06-15 21:24:12,697 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 21:24:15,718 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:24:19,513 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.7814 seconds
+Noisy samples: 240 -> 63
+
+2024-06-15 21:24:20,484 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 88.91%
+Average Accuracy: 91.71%
+Kappa: 0.8769
+
+2024-06-15 21:24:26,447 - INFO - > Parameter settings
+dataset: SalinasScene
+seed: 0
+pca_dim: 32
+superpixels: 102
+2024-06-15 21:24:29,477 - INFO - ------------------------------------> Test noisy_ratio: 0.3
+2024-06-15 21:24:33,094 - INFO - > Label propagation
+Time taken[CG, iters=100]: 3.6053 seconds
+Noisy samples: 240 -> 51
+
+2024-06-15 21:24:35,137 - INFO - > [noisy_ratio: 0.3]The accuracy of labels: 
+Overall Accuracy: 89.20%
+Average Accuracy: 91.74%
+Kappa: 0.8799
+

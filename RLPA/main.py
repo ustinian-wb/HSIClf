@@ -8,6 +8,7 @@
 import yaml
 import common_utils
 import numpy as np
+import data_generator
 import label_propagation
 import elm
 
@@ -19,7 +20,7 @@ datasets = ['SalinasScene']
 # noisy_ratios = np.linspace(0.3, 0.4, 1)
 # noisy_ratios = np.array([0, 0.1, 0.3])
 # noisy_ratios = np.array([0.1, 0.1, 0.1, 0.2, 0.2, 0.3, 0.3, 0.3, 0.3, 0.4, 0.4, 0.4, 0.5, 0.5, 0.5, ])
-noisy_ratios = np.array([0.2])
+noisy_ratios = np.array([0.3])
 # noisy_ratios = np.array([0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.3, 0.3, 0.3, 0.4, 0.4, 0.4, 0.5, 0.5, 0.5, ])
 # elm正则化参数
 lambdaa = 2 ** np.array([8, 10, 12, 14])

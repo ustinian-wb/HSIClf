@@ -22,7 +22,7 @@ train_num_dict:
 epochs_dict:
   IndianPines: [10, 20]
   PaviaUniversity: [10, 20]
-  SalinasScene: [10, 20]
+  SalinasScene: [10, 50]
 
-lr: [0.0005, 0.0005]
+lr: [0.0005, 0.0001]
 batch_size: [128, 128]

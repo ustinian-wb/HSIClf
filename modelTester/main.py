@@ -9,6 +9,7 @@ import numpy as np
 
 import data_generator
 from modelTester.model import hetcnn
+from modelTester.model import new
 import test_utils
 from datetime import datetime
 
@@ -18,21 +19,24 @@ dataset_config_path = "../dataset_config.yaml"
 datasets = ['SalinasScene']
 
 # noisy_ratios = np.array([0, 0, 0, 0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.3, 0.3, 0.3, 0.4, 0.4, 0.4, 0.5, 0.5, 0.5])
-noisy_ratios = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+# noisy_ratios = np.array([0.5])
+noisy_ratios = np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5])
 
 train_num_dict = {
     'IndianPines': 0.1,
     'PaviaUniversity': 50,
     'SalinasScene': 50
 }
-epoch = 30
-lr = 0.005
+epoch = 100
+lr = 0.0001
 batch_size = 128
 
-selected_model = 'hetconv'
+# selected_model = 'hetconv'
+selected_model = 'new'
 
 # 设置日志记录器
-common_utils.setup_logger(f'modelTester_{selected_model}', f'./log/modelTester_{selected_model}_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.log')
+common_utils.setup_logger(f'modelTester_{selected_model}',
+                          f'./log/modelTester_{selected_model}_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.log')
 
 if __name__ == "__main__":
     for dataset in datasets:
@@ -59,9 +63,15 @@ if __name__ == "__main__":
 
             # 测试模型
             best_model_path = f'./ckpt/{selected_model}/{dataset}/best_model_{noisy_ratio}_epoch_{epoch}_lr_{lr}.pth'
-            # 需要根据不同的数据集来设置fc1的参数
-            fc1_in = 1536 if dataset == 'IndianPines' else 768
-            test_model = hetcnn.HSI3DNet(data.num_classes, fc1_in).cuda()
+
+            if selected_model == 'hetconv':
+                # 需要根据不同的数据集来设置fc1的参数
+                fc1_in = 1536 if dataset == 'IndianPines' else 768
+                test_model = hetcnn.HSI3DNet(data.num_classes, fc1_in).cuda()
+            elif selected_model == 'new':
+                # 需要根据不同的数据集来设置fc1的参数
+                fc1_in = 1536 if dataset == 'IndianPines' else 768
+                test_model = new.HSI3DNet(data.num_classes, fc1_in).cuda()
             test_utils.train_and_test(selected_model, test_model, data.train_dataset_noisy, data.val_dataset,
                                       epoch=epoch, lr=lr, batch_size=batch_size,
                                       save_model=True,
